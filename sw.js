@@ -1,5 +1,5 @@
-// Bump CACHE when you change any file so phones pick up the new version.
-var CACHE = 'left-v3';
+// Only change CACHE when you add or rename files in FILES below.
+var CACHE = 'buyin-ledger-v1';
 var FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
@@ -15,20 +15,21 @@ self.addEventListener('activate', function (e) {
   );
 });
 
-// Serve from cache first (works offline), refresh the cache in the background.
+// Network first so edits show up without bumping CACHE; the cache is the offline fallback.
 self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   e.respondWith(
-    caches.match(req, { ignoreSearch: true }).then(function (hit) {
-      var net = fetch(req).then(function (res) {
-        if (res && res.ok) {
-          var copy = res.clone();
-          caches.open(CACHE).then(function (c) { c.put(req, copy); });
-        }
-        return res;
-      }).catch(function () { return hit || caches.match('index.html'); });
-      return hit || net;
+    fetch(req).then(function (res) {
+      if (res && res.ok) {
+        var copy = res.clone();
+        caches.open(CACHE).then(function (c) { c.put(req, copy); });
+      }
+      return res;
+    }).catch(function () {
+      return caches.match(req, { ignoreSearch: true }).then(function (hit) {
+        return hit || caches.match('index.html');
+      });
     })
   );
 });
